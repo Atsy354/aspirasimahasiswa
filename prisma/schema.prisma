@@ -1,0 +1,137 @@
+// Prisma Schema untuk Sistem Aspirasi Mahasiswa UDINUS
+// Migrasi dari PHP ke Next.js
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// Model User - untuk admin dan mahasiswa
+model User {
+  id             Int      @id @default(autoincrement())
+  username       String   @unique @db.VarChar(50)
+  password       String   @db.VarChar(255)
+  role           Role     @default(mahasiswa)
+  isSuperadmin   Boolean  @default(false) @map("is_superadmin")
+  canUbahStatus  Boolean  @default(false) @map("can_ubah_status")
+  
+  // Relations
+  adminPenugasan AdminPenugasan[]
+  articles       Article[]
+  galleries      Gallery[]
+  
+  @@map("user")
+}
+
+// Model Gedung
+model Gedung {
+  id          Int      @id @default(autoincrement())
+  namaGedung  String   @db.VarChar(100) @map("nama_gedung")
+  
+  // Relations
+  aspirasi       Aspirasi[]
+  adminPenugasan AdminPenugasan[]
+  
+  @@map("gedung")
+}
+
+// Model Kategori
+model Kategori {
+  id            Int      @id @default(autoincrement())
+  namaKategori  String   @db.VarChar(100) @map("nama_kategori")
+  divisiLama    String?  @db.VarChar(100) @map("divisi_lama")
+  
+  // Relations
+  aspirasi       Aspirasi[]
+  adminPenugasan AdminPenugasan[]
+  
+  @@map("kategori")
+}
+
+// Model Aspirasi
+model Aspirasi {
+  id           Int      @id @default(autoincrement())
+  nama         String   @db.VarChar(100)
+  nim          String   @db.VarChar(15)
+  jurusan      String?  @db.VarChar(50)
+  kategoriId   Int      @map("kategori_id")
+  gedungId     Int      @map("gedung_id")
+  isiAspirasi  String   @db.Text @map("isi_aspirasi")
+  status       Status   @default(Menunggu)
+  isFlagged    Boolean  @default(false) @map("is_flagged")
+  tanggal      DateTime @default(now()) @db.Timestamp(0)
+  
+  // Relations
+  kategori Kategori @relation(fields: [kategoriId], references: [id])
+  gedung   Gedung   @relation(fields: [gedungId], references: [id])
+  
+  @@index([kategoriId])
+  @@index([gedungId])
+  @@map("aspirasi")
+}
+
+// Model Admin Penugasan
+model AdminPenugasan {
+  id         Int @id @default(autoincrement())
+  userId     Int @map("user_id")
+  kategoriId Int @map("kategori_id")
+  gedungId   Int @map("gedung_id")
+  
+  // Relations
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kategori Kategori @relation(fields: [kategoriId], references: [id], onDelete: Cascade)
+  gedung   Gedung   @relation(fields: [gedungId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([kategoriId])
+  @@index([gedungId])
+  @@map("admin_penugasan")
+}
+
+// Model Article
+model Article {
+  id       Int      @id @default(autoincrement())
+  judul    String   @db.Text
+  isi      String   @db.Text
+  gambar   String   @db.Text
+  tanggal  DateTime @db.DateTime(0)
+  username String   @db.VarChar(50)
+  
+  // Relations
+  user User @relation(fields: [username], references: [username])
+  
+  @@index([username])
+  @@map("article")
+}
+
+// Model Gallery
+model Gallery {
+  id       Int      @id @default(autoincrement())
+  judul    String   @db.Text
+  gambar   String   @db.Text
+  tanggal  DateTime @db.Date
+  username String   @db.VarChar(50)
+  nama     String   @db.Text
+  
+  // Relations
+  user User @relation(fields: [username], references: [username])
+  
+  @@index([username])
+  @@map("gallery")
+}
+
+// Enums
+enum Role {
+  admin
+  mahasiswa
+}
+
+enum Status {
+  Menunggu
+  Diproses
+  Selesai
+}
